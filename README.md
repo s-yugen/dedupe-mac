@@ -6,7 +6,7 @@ Dedupe finds duplicate files on your Mac and lets you choose which copies to mov
 - Add the folders or drives to search with the Open dialog or by dragging them onto the window. To search the whole Mac, choose the startup disk (Macintosh HD) in the dialog. Dedupe remembers the folders between launches.
 - Dedupe compares file contents, not names. `Report.docx` and `Report copy.docx` count as duplicates if their bytes are identical, and two different files that share a name do not.
 - Results come in sets. Each set lists every copy with its folder and modification date. Tick the copies to delete, including every copy if you want the file gone, or use a quick-select rule: keep newest, keep oldest, keep shortest path, or keep longest path.
-- Ticked files go to the Trash, so you can restore them from Finder.
+- Ticked files go to the Trash, so you can restore them from Finder. When the move finishes, a message at the bottom of the window says how many files moved and how much space they take, then fades out after 3 seconds. If some files were skipped or could not be moved, the message is orange, stays for 8 seconds, and has a Details button that lists them.
 - Click a file name in the results to open the file in its default app, so you can check it before choosing. The magnifying glass button shows the file in Finder.
 - Switch between light and dark with the sun/moon button in the toolbar. Its arrow, and View, Appearance, also offer Use System Setting. The app remembers the choice.
 - Change the size of the results text with View, Larger Text (Command-plus), Smaller Text (Command-minus) and Actual Size (Command-0). The app remembers the size.

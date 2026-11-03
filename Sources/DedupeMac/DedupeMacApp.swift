@@ -48,6 +48,7 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 440)
         } detail: {
             ResultsView()
+                .overlay { ToastOverlay() }
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {

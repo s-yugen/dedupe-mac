@@ -11,6 +11,17 @@ struct AlertInfo: Identifiable {
     let message: String
 }
 
+/// A short message shown at the bottom of the window that fades out by
+/// itself.
+struct ToastInfo: Identifiable, Equatable {
+    let id = UUID()
+    let message: String
+    /// Orange icon and a longer display time, for results with problems.
+    let isWarning: Bool
+    /// Extra text shown in an alert when the user clicks Details.
+    let details: String?
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -41,6 +52,8 @@ final class AppModel {
     var skippedCloudOnly = 0
     var isTrashing = false
     var alert: AlertInfo?
+    var toast: ToastInfo?
+    private var toastTimer: Task<Void, Never>?
 
     private var worker: Task<ScanResult, Error>?
     private let folderAccess = FolderAccess()
@@ -311,18 +324,65 @@ final class AppModel {
         marked.formIntersection(remaining)
 
         let freed = outcome.trashed.reduce(Int64(0)) { $0 + (sizes[$1] ?? 0) }
-        var lines = ["Moved \(outcome.trashed.count) file(s), \(freed.formattedBytes), to the Trash."]
+        let movedCount = outcome.trashed.count
+        var message = "Moved \(movedCount) \(movedCount == 1 ? "file" : "files"), \(freed.formattedBytes), to the Trash."
+
+        var problems: [String] = []
+        var problemCount = 0
         if !plan.blockedGroupIDs.isEmpty {
-            lines.append("Skipped \(plan.blockedGroupIDs.count) set(s) because the copies you chose to keep are no longer on disk.")
+            problemCount += plan.blockedGroupIDs.count
+            problems.append("Skipped \(plan.blockedGroupIDs.count) set(s) because the copies you chose to keep are no longer on disk.")
         }
         if !plan.changedFiles.isEmpty {
-            lines.append("Skipped \(plan.changedFiles.count) file(s) that changed since the scan.")
+            problemCount += plan.changedFiles.count
+            let paths = plan.changedFiles.prefix(10).map(\.path).joined(separator: "\n")
+            problems.append("Skipped \(plan.changedFiles.count) file(s) that changed since the scan:\n" + paths)
         }
         if !outcome.failures.isEmpty {
-            let examples = outcome.failures.prefix(5).map { "\($0.url.path): \($0.reason)" }
-            lines.append("Could not move \(outcome.failures.count) file(s):\n" + examples.joined(separator: "\n"))
+            problemCount += outcome.failures.count
+            let examples = outcome.failures.prefix(10).map { "\($0.url.path): \($0.reason)" }
+            problems.append("Could not move \(outcome.failures.count) file(s):\n" + examples.joined(separator: "\n"))
         }
-        alert = AlertInfo(title: "Done", message: lines.joined(separator: "\n\n"))
+
+        if problems.isEmpty {
+            showToast(ToastInfo(message: message, isWarning: false, details: nil))
+        } else {
+            message += " \(problemCount) \(problemCount == 1 ? "item was" : "items were") skipped."
+            showToast(ToastInfo(message: message, isWarning: true, details: problems.joined(separator: "\n\n")))
+        }
+    }
+
+    // MARK: Toast
+
+    func showToast(_ toast: ToastInfo) {
+        self.toast = toast
+        toastTimer?.cancel()
+        let seconds = toast.isWarning ? 8 : 3
+        toastTimer = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self, self.toast?.id == toast.id else { return }
+            self.toast = nil
+        }
+        // VoiceOver users do not see the toast, so read it out.
+        NSAccessibility.post(
+            element: NSApp.mainWindow as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: toast.message,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue,
+            ]
+        )
+    }
+
+    func dismissToast() {
+        toastTimer?.cancel()
+        toast = nil
+    }
+
+    func showToastDetails() {
+        guard let details = toast?.details else { return }
+        dismissToast()
+        alert = AlertInfo(title: "Some files were skipped", message: details)
     }
 
     // MARK: Finder
