@@ -8,6 +8,7 @@ Dedupe finds duplicate files on your Mac and lets you choose which copies to mov
 - Results come in sets. Each set lists every copy with its folder and modification date. Tick the copies to delete, including every copy if you want the file gone, or use a quick-select rule: keep newest, keep oldest, keep shortest path, or keep longest path.
 - Ticked files go to the Trash, so you can restore them from Finder.
 - Click a file name in the results to open the file in its default app, so you can check it before choosing. The magnifying glass button shows the file in Finder.
+- Switch between light and dark with the sun/moon button in the toolbar. Its arrow, and View, Appearance, also offer Use System Setting. The app remembers the choice.
 - Change the size of the results text with View, Larger Text (Command-plus), Smaller Text (Command-minus) and Actual Size (Command-0). The app remembers the size.
 
 Requires macOS 14 Sonoma or later. Building requires Xcode 16 or later.
