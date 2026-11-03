@@ -27,6 +27,9 @@ struct DedupeMacApp: App {
                 .frame(minWidth: 960, minHeight: 600)
         }
         .windowResizability(.contentMinSize)
+        .commands {
+            TextSizeCommands()
+        }
     }
 }
 

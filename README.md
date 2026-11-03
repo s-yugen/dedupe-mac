@@ -7,6 +7,8 @@ Dedupe finds duplicate files on your Mac and lets you choose which copies to mov
 - Dedupe compares file contents, not names. `Report.docx` and `Report copy.docx` count as duplicates if their bytes are identical, and two different files that share a name do not.
 - Results come in sets. Each set lists every copy with its folder and modification date. Tick the copies to delete, or use a quick-select rule: keep newest, keep oldest, keep shortest path, or keep longest path.
 - Ticked files go to the Trash, so you can restore them from Finder.
+- Click a file name in the results to open the file in its default app, so you can check it before choosing. The magnifying glass button shows the file in Finder.
+- Change the size of the results text with View, Larger Text (Command-plus), Smaller Text (Command-minus) and Actual Size (Command-0). The app remembers the size.
 
 Requires macOS 14 Sonoma or later. Building requires Xcode 16 or later.
 

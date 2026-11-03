@@ -286,7 +286,13 @@ final class AppModel {
     }
 
     func open(_ file: FileItem) {
-        NSWorkspace.shared.open(file.url)
+        guard FileManager.default.fileExists(atPath: file.path) else {
+            alert = AlertInfo(title: "File not found", message: "\(file.path) was moved or deleted after the scan.")
+            return
+        }
+        if !NSWorkspace.shared.open(file.url) {
+            alert = AlertInfo(title: "Could not open file", message: "No app on this Mac can open \(file.name).")
+        }
     }
 
     func copyPath(_ file: FileItem) {

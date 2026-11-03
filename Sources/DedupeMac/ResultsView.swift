@@ -120,7 +120,7 @@ struct DuplicateListView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("\(model.groups.count) sets of duplicates. \(model.totalWastedBytes.formattedBytes) can be freed by keeping one copy of each.")
                         .font(.headline)
-                    Text("Tick the copies to delete. Use Auto-Select in the toolbar or the Select menu on each set to tick all but one copy. Each set always keeps at least one file.")
+                    Text("Tick the copies to delete. Use Auto-Select in the toolbar or the Select menu on each set to tick all but one copy. Each set always keeps at least one file. Click a file name to open the file. Change the text size with View > Larger Text (Command-plus) and Smaller Text (Command-minus).")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     ScanNotes()
@@ -204,15 +204,17 @@ struct DuplicateListView: View {
 
 struct GroupHeader: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(ResultsTextSize.key) private var textSize = ResultsTextSize.standard
     let group: DuplicateGroup
 
     var body: some View {
         HStack(spacing: 8) {
             Text(group.files.first?.name ?? "")
-                .font(.headline)
+                .font(.system(size: textSize + 1, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Text("\(group.files.count) copies, \(group.size.formattedBytes) each")
+                .font(.system(size: textSize - 1))
                 .foregroundStyle(.secondary)
             Spacer()
             Menu("Select") {
@@ -225,19 +227,23 @@ struct GroupHeader: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
         }
-        .padding(.top, 6)
+        .padding(.top, 8)
     }
 }
 
 struct FileRow: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(ResultsTextSize.key) private var textSize = ResultsTextSize.standard
+    @State private var isHoveringName = false
     let file: FileItem
     let group: DuplicateGroup
+
+    private var detailSize: Double { textSize - 2 }
 
     var body: some View {
         let isMarked = model.isMarked(file)
         let canToggle = model.canMark(file, in: group)
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Toggle(
                 "Delete",
                 isOn: Binding(
@@ -247,19 +253,45 @@ struct FileRow: View {
             )
             .toggleStyle(.checkbox)
             .labelsHidden()
+            .controlSize(textSize >= 17 ? .large : .regular)
             .disabled(!canToggle)
             .help(canToggle ? "Tick to move this copy to the Trash" : "At least one copy must be kept")
 
             Image(nsImage: NSWorkspace.shared.icon(forFile: file.path))
                 .resizable()
-                .frame(width: 22, height: 22)
+                .frame(width: textSize * 2, height: textSize * 2)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(file.name)
-                    .strikethrough(isMarked)
-                    .foregroundStyle(isMarked ? Color.secondary : Color.primary)
+            VStack(alignment: .leading, spacing: 3) {
+                Button {
+                    model.open(file)
+                } label: {
+                    Text(file.name)
+                        .font(.system(size: textSize))
+                        .strikethrough(isMarked)
+                        .underline(isHoveringName && !isMarked)
+                        .foregroundStyle(isMarked ? Color.secondary : Color.accentColor)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                .buttonStyle(.plain)
+                .help("Open \(file.name)")
+                .onHover { hovering in
+                    isHoveringName = hovering
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
+                .onDisappear {
+                    if isHoveringName {
+                        NSCursor.pop()
+                        isHoveringName = false
+                    }
+                }
+
                 Text((file.url.deletingLastPathComponent().path as NSString).abbreviatingWithTildeInPath)
-                    .font(.caption)
+                    .font(.system(size: detailSize))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -268,17 +300,17 @@ struct FileRow: View {
 
             Spacer(minLength: 12)
 
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: 3) {
                 Text("Modified " + (file.modified?.formatted(date: .abbreviated, time: .shortened) ?? "unknown"))
-                    .font(.caption)
+                    .font(.system(size: detailSize))
                     .monospacedDigit()
                 if isMarked {
                     Text("Will move to Trash")
-                        .font(.caption)
+                        .font(.system(size: detailSize, weight: .medium))
                         .foregroundStyle(.red)
                 } else {
                     Text("Keep")
-                        .font(.caption)
+                        .font(.system(size: detailSize, weight: .medium))
                         .foregroundStyle(.green)
                 }
             }
@@ -287,15 +319,16 @@ struct FileRow: View {
                 model.reveal(file)
             } label: {
                 Image(systemName: "magnifyingglass")
+                    .font(.system(size: detailSize + 1))
             }
             .buttonStyle(.borderless)
             .help("Show in Finder")
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
         .contextMenu {
-            Button("Show in Finder") { model.reveal(file) }
             Button("Open") { model.open(file) }
+            Button("Show in Finder") { model.reveal(file) }
             Button("Copy Path") { model.copyPath(file) }
         }
     }
