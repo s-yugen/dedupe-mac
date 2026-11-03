@@ -67,7 +67,14 @@ Increase **Version** and **Build** on the target's General tab before each new u
 4. For files that still match and are larger than 16 KB, hash the whole file.
 5. Files with the same size and the same full SHA-256 hash form a duplicate set.
 
-Sets are sorted by how much space they waste, largest first.
+Sets start out sorted by space to free, largest first. Use Sort in the toolbar to sort by:
+
+- Space to free: size times the number of extra copies.
+- File size: the size of one copy.
+- File name: the first copy's name, in Finder order (case is ignored and "file 2" comes before "file 10").
+- Folder: the first copy's folder.
+
+The same menu switches the direction. Picking a new sort key resets the direction to largest first for sizes and A to Z for names and folders. Inside each set, copies are ordered by file name when sorting by name and by folder otherwise. The app remembers the choice.
 
 ## Project layout
 

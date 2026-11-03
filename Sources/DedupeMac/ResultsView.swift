@@ -120,7 +120,7 @@ struct DuplicateListView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("\(model.groups.count) sets of duplicates. \(model.totalWastedBytes.formattedBytes) can be freed by keeping one copy of each.")
                         .font(.headline)
-                    Text("Tick the copies to delete. Use Auto-Select in the toolbar or the Select menu on each set to tick all but one copy. To remove a file completely, tick every copy in its set. Click a file name to open the file. Change the text size with View > Larger Text (Command-plus) and Smaller Text (Command-minus).")
+                    Text("Tick the copies to delete. Use Auto-Select in the toolbar or the Select menu on each set to tick all but one copy. To remove a file completely, tick every copy in its set. Use Sort in the toolbar to order the sets by space to free, file size, file name or folder. Click a file name to open the file. Change the text size with View > Larger Text (Command-plus) and Smaller Text (Command-minus).")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     ScanNotes()
@@ -142,6 +142,8 @@ struct DuplicateListView: View {
         .searchable(text: $searchText, placement: .toolbar, prompt: "Filter by name or folder")
         .toolbar {
             ToolbarItemGroup {
+                SortMenu()
+
                 Menu {
                     ForEach(KeepRule.allCases) { rule in
                         Button(rule.title) { model.apply(rule, to: groups) }
@@ -219,6 +221,45 @@ struct DuplicateListView: View {
         .padding(.horizontal)
         .padding(.vertical, 10)
         .background(.bar)
+    }
+}
+
+/// Toolbar menu that picks the sort key and direction for the sets.
+struct SortMenu: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let order = model.sortOrder
+        Menu {
+            Picker(
+                "Sort By",
+                selection: Binding(
+                    get: { model.sortOrder },
+                    set: { model.setSortOrder($0) }
+                )
+            ) {
+                ForEach(DuplicateSortOrder.allCases) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+            .pickerStyle(.inline)
+
+            Picker(
+                "Order",
+                selection: Binding(
+                    get: { model.sortAscending },
+                    set: { model.setSortAscending($0) }
+                )
+            ) {
+                Text(order.ascendingTitle).tag(true)
+                Text(order.descendingTitle).tag(false)
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label("Sort: \(order.title)", systemImage: model.sortAscending ? "arrow.up" : "arrow.down")
+                .labelStyle(.titleAndIcon)
+        }
+        .help("Sorted by \(order.title.lowercased()), \((model.sortAscending ? order.ascendingTitle : order.descendingTitle).lowercased())")
     }
 }
 

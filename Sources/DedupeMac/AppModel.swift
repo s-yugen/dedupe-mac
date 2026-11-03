@@ -45,8 +45,45 @@ final class AppModel {
     private var worker: Task<ScanResult, Error>?
     private let folderAccess = FolderAccess()
 
+    // MARK: Sorting
+
+    private static let sortOrderKey = "SortOrder"
+    private static let sortAscendingKey = "SortAscending"
+
+    /// `groups` is always kept in this order, so the list does not re-sort
+    /// on every checkbox click.
+    private(set) var sortOrder: DuplicateSortOrder = .spaceToFree
+    private(set) var sortAscending = false
+
     init() {
         folders = folderAccess.restore()
+        let defaults = UserDefaults.standard
+        if let raw = defaults.string(forKey: Self.sortOrderKey),
+           let order = DuplicateSortOrder(rawValue: raw) {
+            sortOrder = order
+            sortAscending = defaults.object(forKey: Self.sortAscendingKey) as? Bool ?? order.defaultAscending
+        }
+    }
+
+    /// Picking a new sort key also resets the direction to the natural one
+    /// for that key: largest first for sizes, A to Z for names and folders.
+    func setSortOrder(_ order: DuplicateSortOrder) {
+        guard order != sortOrder else { return }
+        sortOrder = order
+        sortAscending = order.defaultAscending
+        applySort()
+    }
+
+    func setSortAscending(_ ascending: Bool) {
+        guard ascending != sortAscending else { return }
+        sortAscending = ascending
+        applySort()
+    }
+
+    private func applySort() {
+        UserDefaults.standard.set(sortOrder.rawValue, forKey: Self.sortOrderKey)
+        UserDefaults.standard.set(sortAscending, forKey: Self.sortAscendingKey)
+        groups = DuplicateSorter.sort(groups, by: sortOrder, ascending: sortAscending)
     }
 
     // MARK: Derived values
@@ -177,7 +214,7 @@ final class AppModel {
         worker = nil
         switch result {
         case .success(let scan):
-            groups = scan.groups
+            groups = DuplicateSorter.sort(scan.groups, by: sortOrder, ascending: sortAscending)
             filesScanned = scan.filesScanned
             unreadablePaths = scan.unreadablePaths
             skippedCloudOnly = scan.skippedCloudOnly

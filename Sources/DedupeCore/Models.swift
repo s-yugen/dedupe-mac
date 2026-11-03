@@ -17,6 +17,8 @@ public struct FileItem: Identifiable, Hashable, Sendable {
 
     public var path: String { url.path }
     public var name: String { url.lastPathComponent }
+    /// Path of the folder that holds the file.
+    public var folderPath: String { url.deletingLastPathComponent().path }
 }
 
 /// Two or more files with identical contents.
