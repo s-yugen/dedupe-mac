@@ -46,11 +46,24 @@ final class SelectionTests: XCTestCase {
 
     // MARK: SafeTrasher
 
-    func testPlanBlocksGroupWhenEverythingIsSelected() {
+    func testPlanTrashesEveryCopyWhenEverythingIsSelected() {
         let all = Set(group.files.map(\.url))
         let plan = SafeTrasher.plan(selection: all, groups: [group], fileExists: { _ in true }, currentSize: { _ in 10 })
-        XCTAssertEqual(plan.urlsToTrash, [])
-        XCTAssertEqual(plan.blockedGroupIDs, ["g"])
+        XCTAssertEqual(Set(plan.urlsToTrash), all)
+        XCTAssertEqual(plan.blockedGroupIDs, [])
+    }
+
+    func testPlanSkipsChangedFileEvenWhenEverythingIsSelected() {
+        let all = Set(group.files.map(\.url))
+        let changed = group.files[0].url
+        let plan = SafeTrasher.plan(
+            selection: all,
+            groups: [group],
+            fileExists: { _ in true },
+            currentSize: { $0 == changed ? 99 : 10 }
+        )
+        XCTAssertEqual(Set(plan.urlsToTrash), all.subtracting([changed]))
+        XCTAssertEqual(plan.changedFiles, [changed])
     }
 
     func testPlanBlocksGroupWhenKeptCopyIsGone() {

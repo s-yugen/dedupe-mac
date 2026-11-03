@@ -120,7 +120,7 @@ struct DuplicateListView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("\(model.groups.count) sets of duplicates. \(model.totalWastedBytes.formattedBytes) can be freed by keeping one copy of each.")
                         .font(.headline)
-                    Text("Tick the copies to delete. Use Auto-Select in the toolbar or the Select menu on each set to tick all but one copy. Each set always keeps at least one file. Click a file name to open the file. Change the text size with View > Larger Text (Command-plus) and Smaller Text (Command-minus).")
+                    Text("Tick the copies to delete. Use Auto-Select in the toolbar or the Select menu on each set to tick all but one copy. To remove a file completely, tick every copy in its set. Click a file name to open the file. Change the text size with View > Larger Text (Command-plus) and Smaller Text (Command-minus).")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     ScanNotes()
@@ -146,6 +146,10 @@ struct DuplicateListView: View {
                     ForEach(KeepRule.allCases) { rule in
                         Button(rule.title) { model.apply(rule, to: groups) }
                     }
+                    Divider()
+                    Button(searchText.isEmpty ? "Tick every copy in every set" : "Tick every copy in the filtered sets") {
+                        model.markAll(in: groups)
+                    }
                 } label: {
                     Label("Auto-Select", systemImage: "wand.and.stars")
                 }
@@ -168,11 +172,27 @@ struct DuplicateListView: View {
             isPresented: $confirmTrash,
             titleVisibility: .visible
         ) {
-            Button("Move to Trash", role: .destructive) { model.trashMarked() }
+            Button(
+                model.fullyMarkedGroupCount > 0 ? "Move to Trash, Including Every Copy" : "Move to Trash",
+                role: .destructive
+            ) {
+                model.trashMarked()
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This frees \(model.markedBytes.formattedBytes) once you empty the Trash. You can restore the files from the Trash in Finder until then.")
+            Text(confirmationMessage)
         }
+    }
+
+    private var confirmationMessage: String {
+        var text = "This frees \(model.markedBytes.formattedBytes) once you empty the Trash. Until then you can restore the files from the Trash in Finder."
+        let fullSets = model.fullyMarkedGroupCount
+        if fullSets == 1 {
+            text = "1 set has every copy ticked. No copy of that file will be left once you empty the Trash.\n\n" + text
+        } else if fullSets > 1 {
+            text = "\(fullSets) sets have every copy ticked. No copy of those files will be left once you empty the Trash.\n\n" + text
+        }
+        return text
     }
 
     private var bottomBar: some View {
@@ -216,13 +236,19 @@ struct GroupHeader: View {
             Text("\(group.files.count) copies, \(group.size.formattedBytes) each")
                 .font(.system(size: textSize - 1))
                 .foregroundStyle(.secondary)
+            if model.isFullyMarked(group) {
+                Label("Every copy will be deleted", systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: textSize - 1, weight: .semibold))
+                    .foregroundStyle(.red)
+            }
             Spacer()
             Menu("Select") {
                 ForEach(KeepRule.allCases) { rule in
                     Button(rule.title) { model.apply(rule, to: [group]) }
                 }
                 Divider()
-                Button("Keep all") { model.unmark(group) }
+                Button("Delete all copies") { model.markAll(in: [group]) }
+                Button("Keep all copies") { model.unmark(group) }
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
@@ -242,20 +268,18 @@ struct FileRow: View {
 
     var body: some View {
         let isMarked = model.isMarked(file)
-        let canToggle = model.canMark(file, in: group)
         HStack(spacing: 12) {
             Toggle(
                 "Delete",
                 isOn: Binding(
                     get: { model.isMarked(file) },
-                    set: { model.setMarked($0, file: file, in: group) }
+                    set: { model.setMarked($0, file: file) }
                 )
             )
             .toggleStyle(.checkbox)
             .labelsHidden()
             .controlSize(textSize >= 17 ? .large : .regular)
-            .disabled(!canToggle)
-            .help(canToggle ? "Tick to move this copy to the Trash" : "At least one copy must be kept")
+            .help(isMarked ? "Untick to keep this copy" : "Tick to move this copy to the Trash")
 
             Image(nsImage: NSWorkspace.shared.icon(forFile: file.path))
                 .resizable()

@@ -5,7 +5,7 @@ Dedupe finds duplicate files on your Mac and lets you choose which copies to mov
 - Pick the file types to look for. Tick predefined types (Word, Excel, PowerPoint, PDF, images, audio, video, archives and more) or type your own extensions, such as `psd, epub, tar.gz`.
 - Add the folders or drives to search with the Open dialog or by dragging them onto the window. To search the whole Mac, choose the startup disk (Macintosh HD) in the dialog. Dedupe remembers the folders between launches.
 - Dedupe compares file contents, not names. `Report.docx` and `Report copy.docx` count as duplicates if their bytes are identical, and two different files that share a name do not.
-- Results come in sets. Each set lists every copy with its folder and modification date. Tick the copies to delete, or use a quick-select rule: keep newest, keep oldest, keep shortest path, or keep longest path.
+- Results come in sets. Each set lists every copy with its folder and modification date. Tick the copies to delete, including every copy if you want the file gone, or use a quick-select rule: keep newest, keep oldest, keep shortest path, or keep longest path.
 - Ticked files go to the Trash, so you can restore them from Finder.
 - Click a file name in the results to open the file in its default app, so you can check it before choosing. The magnifying glass button shows the file in Finder.
 - Change the size of the results text with View, Larger Text (Command-plus), Smaller Text (Command-minus) and Actual Size (Command-0). The app remembers the size.
@@ -48,8 +48,8 @@ Increase **Version** and **Build** on the target's General tab before each new u
 
 ## Safety rules
 
-- Each set must keep at least one copy. The app disables the last unticked checkbox in a set.
-- Right before moving files, the app checks the disk again. It skips a set if the kept copy is gone or has changed size, and it skips any ticked file whose size changed since the scan.
+- You can tick every copy in a set to remove the file completely, one by one or with Select, Delete all copies. The set header then shows "Every copy will be deleted" in red, and the confirmation dialog says how many sets will have no copy left.
+- Right before moving files, the app checks the disk again. In a set where you keep some copies, it skips the whole set if none of the kept copies is still there with the same size, so a file you meant to keep is never lost. It also skips any ticked file whose size changed since the scan.
 - Files go to the Trash. Nothing is deleted until you empty the Trash.
 - The scan skips system folders (`/System`, `/private`, `/usr`, `/bin`, `/sbin`, `/opt`, `/dev`, `/cores`) and Trash folders.
 - The scan skips `Library` folders unless you turn on "Include Library folders". Apps keep their data there, and deleting files in them can break apps.

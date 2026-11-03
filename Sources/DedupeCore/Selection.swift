@@ -50,8 +50,9 @@ public enum KeepRule: String, CaseIterable, Identifiable, Sendable {
 public struct TrashPlan: Sendable, Equatable {
     /// Files that are safe to move to the Trash.
     public var urlsToTrash: [URL]
-    /// Groups where the selection would leave no copy on disk. Nothing in
-    /// these groups is touched.
+    /// Groups where the user meant to keep some copies, but none of the
+    /// kept copies is still on disk unchanged. Nothing in these groups is
+    /// touched, so a file the user meant to keep is never lost.
     public var blockedGroupIDs: [String]
     /// Selected files whose size changed since the scan. They may no longer
     /// be duplicates, so they are left alone.
@@ -85,8 +86,15 @@ public struct TrashOutcome: Sendable {
 }
 
 public enum SafeTrasher {
-    /// Checks the selection against what is on disk right now. A group's
-    /// files are trashed only if at least one unselected copy still exists.
+    /// Checks the selection against what is on disk right now.
+    ///
+    /// - If every copy in a group is selected, the user chose to remove them
+    ///   all, and all of them are trashed.
+    /// - Otherwise the selected copies are trashed only if at least one
+    ///   unselected copy still exists with the same size.
+    ///
+    /// In both cases a selected file whose size changed since the scan is
+    /// left alone.
     public static func plan(
         selection: Set<URL>,
         groups: [DuplicateGroup],
@@ -101,12 +109,15 @@ public enum SafeTrasher {
             let selected = group.files.filter { selection.contains($0.url) }
             guard !selected.isEmpty else { continue }
 
-            let keptOnDisk = group.files.filter {
-                !selection.contains($0.url) && fileExists($0.url) && currentSize($0.url) == group.size
-            }
-            guard !keptOnDisk.isEmpty else {
-                blocked.append(group.id)
-                continue
+            let removesEveryCopy = selected.count == group.files.count
+            if !removesEveryCopy {
+                let keptOnDisk = group.files.filter {
+                    !selection.contains($0.url) && fileExists($0.url) && currentSize($0.url) == group.size
+                }
+                guard !keptOnDisk.isEmpty else {
+                    blocked.append(group.id)
+                    continue
+                }
             }
             for file in selected {
                 if currentSize(file.url) == group.size {

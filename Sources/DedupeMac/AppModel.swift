@@ -196,20 +196,29 @@ final class AppModel {
         marked.contains(file.url)
     }
 
-    /// A file can be marked only if at least one other copy in its group
-    /// stays unmarked.
-    func canMark(_ file: FileItem, in group: DuplicateGroup) -> Bool {
-        if marked.contains(file.url) { return true }
-        let unmarked = group.files.filter { !marked.contains($0.url) }.count
-        return unmarked > 1
-    }
-
-    func setMarked(_ value: Bool, file: FileItem, in group: DuplicateGroup) {
+    func setMarked(_ value: Bool, file: FileItem) {
         if value {
-            guard canMark(file, in: group) else { return }
             marked.insert(file.url)
         } else {
             marked.remove(file.url)
+        }
+    }
+
+    /// True when every copy in the group is ticked, so nothing of it would
+    /// be left after the Trash is emptied.
+    func isFullyMarked(_ group: DuplicateGroup) -> Bool {
+        !group.files.isEmpty && group.files.allSatisfy { marked.contains($0.url) }
+    }
+
+    var fullyMarkedGroupCount: Int {
+        groups.filter(isFullyMarked).count
+    }
+
+    func markAll(in targetGroups: [DuplicateGroup]) {
+        for group in targetGroups {
+            for file in group.files {
+                marked.insert(file.url)
+            }
         }
     }
 
@@ -267,7 +276,7 @@ final class AppModel {
         let freed = outcome.trashed.reduce(Int64(0)) { $0 + (sizes[$1] ?? 0) }
         var lines = ["Moved \(outcome.trashed.count) file(s), \(freed.formattedBytes), to the Trash."]
         if !plan.blockedGroupIDs.isEmpty {
-            lines.append("Skipped \(plan.blockedGroupIDs.count) group(s) because no other copy is left on disk.")
+            lines.append("Skipped \(plan.blockedGroupIDs.count) set(s) because the copies you chose to keep are no longer on disk.")
         }
         if !plan.changedFiles.isEmpty {
             lines.append("Skipped \(plan.changedFiles.count) file(s) that changed since the scan.")
