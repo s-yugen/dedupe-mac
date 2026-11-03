@@ -17,15 +17,14 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Run tests
+      - name: Run core tests
         run: swift test
 
-      - name: Build Dedupe.app
-        run: ./scripts/build-app.sh
-
-      - name: Upload app
-        uses: actions/upload-artifact@v4
-        with:
-          name: Dedupe-app
-          path: build/Dedupe.zip
-          if-no-files-found: error
+      - name: Build the Xcode project (unsigned)
+        run: |
+          xcodebuild build \
+            -project Dedupe.xcodeproj \
+            -scheme Dedupe \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO

@@ -1,5 +1,7 @@
 import AppKit
+#if canImport(DedupeCore)
 import DedupeCore
+#endif
 import Observation
 import SwiftUI
 
@@ -20,7 +22,9 @@ final class AppModel {
 
     // MARK: Setup
 
-    var folders: [URL] = [FileManager.default.homeDirectoryForCurrentUser]
+    /// Folders to search. The sandbox only lets the app read folders the
+    /// user picked, so this starts empty and is restored from bookmarks.
+    private(set) var folders: [URL] = []
     var selectedCategories: Set<FileTypeCategory> = [.word, .excel, .powerpoint, .pdf]
     var customExtensionsText = ""
     var includeHiddenFiles = false
@@ -39,6 +43,11 @@ final class AppModel {
     var alert: AlertInfo?
 
     private var worker: Task<ScanResult, Error>?
+    private let folderAccess = FolderAccess()
+
+    init() {
+        folders = folderAccess.restore()
+    }
 
     // MARK: Derived values
 
@@ -73,8 +82,9 @@ final class AppModel {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
+        panel.directoryURL = UserHome.directory
         panel.prompt = "Add"
-        panel.message = "Choose folders or drives to search for duplicates."
+        panel.message = "Choose folders or drives to search for duplicates. Dedupe can only read the folders you choose here."
         if panel.runModal() == .OK {
             addFolders(panel.urls)
         }
@@ -86,22 +96,17 @@ final class AppModel {
             guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
                   isDirectory.boolValue else { continue }
             let standardized = url.standardizedFileURL
-            if !folders.contains(standardized) {
-                folders.append(standardized)
-            }
+            guard !folders.contains(standardized) else { continue }
+            folderAccess.add(standardized)
+            folders.append(standardized)
         }
-    }
-
-    func addHomeFolder() {
-        addFolders([FileManager.default.homeDirectoryForCurrentUser])
-    }
-
-    func addWholeDisk() {
-        addFolders([URL(fileURLWithPath: "/")])
+        folderAccess.save(folders)
     }
 
     func removeFolder(_ url: URL) {
         folders.removeAll { $0 == url }
+        folderAccess.remove(url)
+        folderAccess.save(folders)
     }
 
     // MARK: File types
@@ -287,11 +292,5 @@ final class AppModel {
     func copyPath(_ file: FileItem) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(file.path, forType: .string)
-    }
-
-    func openFullDiskAccessSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
-            NSWorkspace.shared.open(url)
-        }
     }
 }

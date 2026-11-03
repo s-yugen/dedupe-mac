@@ -1,4 +1,6 @@
+#if canImport(DedupeCore)
 import DedupeCore
+#endif
 import SwiftUI
 
 /// Sidebar: folders to search, file types, options and the Scan button.
@@ -10,7 +12,7 @@ struct SetupView: View {
         Form {
             Section {
                 if model.folders.isEmpty {
-                    Text("No folders yet. Add one below or drop a folder here.")
+                    Text("No folders yet. Click Add Folder or drag a folder here. To search your whole Mac, choose your startup disk (Macintosh HD) in the dialog.")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(model.folders, id: \.self) { url in
@@ -31,12 +33,7 @@ struct SetupView: View {
                         .help("Remove this folder")
                     }
                 }
-                Menu("Add Folder") {
-                    Button("Choose Folder or Drive...") { model.chooseFolders() }
-                    Button("Home Folder") { model.addHomeFolder() }
-                    Button("Entire Startup Disk") { model.addWholeDisk() }
-                }
-                .fixedSize()
+                Button("Add Folder or Drive...") { model.chooseFolders() }
             } header: {
                 Text("Search in")
             }

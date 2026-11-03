@@ -120,7 +120,7 @@ public struct DuplicateScanner: Sendable {
         if !options.includeHiddenFiles {
             enumerationOptions.insert(.skipsHiddenFiles)
         }
-        let homePath = fileManager.homeDirectoryForCurrentUser.standardizedFileURL.path
+        let homePath = UserHome.directory.standardizedFileURL.path
 
         var seenPaths = Set<String>()
         var items: [FileItem] = []
@@ -281,7 +281,7 @@ private final class ProgressReporter {
 
     func update(force: Bool = false, _ change: (inout ScanProgress) -> Void) {
         change(&state)
-        let now = ProcessInfo.processInfo.systemUptime
+        let now = Date().timeIntervalSinceReferenceDate
         if force || now - lastSent >= 0.1 {
             lastSent = now
             handler(state)

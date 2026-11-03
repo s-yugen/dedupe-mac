@@ -1,5 +1,7 @@
 import AppKit
+#if canImport(DedupeCore)
 import DedupeCore
+#endif
 import SwiftUI
 
 struct ResultsView: View {
@@ -11,7 +13,7 @@ struct ResultsView: View {
             ContentUnavailableView(
                 "No scan yet",
                 systemImage: "doc.on.doc",
-                description: Text("Pick folders and file types on the left, then click Scan for Duplicates.")
+                description: Text("Add the folders to search and pick file types on the left, then click Scan for Duplicates.")
             )
         case .scanning:
             ScanProgressView()
@@ -83,9 +85,7 @@ struct ScanNotes: View {
                 HStack(alignment: .firstTextBaseline) {
                     Image(systemName: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
-                    Text("\(model.unreadablePaths.count) items could not be read. Give Dedupe Full Disk Access to include them.")
-                    Button("Open Settings") { model.openFullDiskAccessSettings() }
-                        .buttonStyle(.link)
+                    Text("Skipped \(model.unreadablePaths.count) items that macOS did not allow Dedupe to read. Hover for the list.")
                 }
                 .help(model.unreadablePaths.prefix(20).joined(separator: "\n"))
             }

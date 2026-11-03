@@ -1,14 +1,48 @@
 # Dedupe for Mac
 
-Dedupe finds duplicate files on your Mac and lets you choose which copies to move to the Trash.
+Dedupe finds duplicate files on your Mac and lets you choose which copies to move to the Trash. It is built for the Mac App Store and runs in the App Sandbox.
 
 - Pick the file types to look for. Tick predefined types (Word, Excel, PowerPoint, PDF, images, audio, video, archives and more) or type your own extensions, such as `psd, epub, tar.gz`.
-- Pick the folders or drives to search. The default is your home folder. You can add other folders, external drives, or the whole startup disk.
+- Add the folders or drives to search with the Open dialog or by dragging them onto the window. To search the whole Mac, choose the startup disk (Macintosh HD) in the dialog. Dedupe remembers the folders between launches.
 - Dedupe compares file contents, not names. `Report.docx` and `Report copy.docx` count as duplicates if their bytes are identical, and two different files that share a name do not.
 - Results come in sets. Each set lists every copy with its folder and modification date. Tick the copies to delete, or use a quick-select rule: keep newest, keep oldest, keep shortest path, or keep longest path.
 - Ticked files go to the Trash, so you can restore them from Finder.
 
-Requires macOS 14 Sonoma or later. Runs on Apple silicon and Intel Macs.
+Requires macOS 14 Sonoma or later. Building requires Xcode 16 or later.
+
+## Set up signing in Xcode
+
+1. Open `Dedupe.xcodeproj` in Xcode.
+2. If you have not signed in yet, open Xcode, Settings, Accounts, click **+**, and sign in with the Apple ID of your Apple Developer Program membership.
+3. In the Project navigator on the left, click the blue **Dedupe** project, then the **Dedupe** target under Targets.
+4. Open the **Signing & Capabilities** tab.
+5. Leave **Automatically manage signing** ticked and choose your team in **Team**.
+6. Change **Bundle Identifier** to one you own, such as `com.yourcompany.dedupe`. The placeholder `io.github.s-yugen.dedupe-mac` will not register under your team.
+7. Under **App Sandbox**, check that **User Selected File** is set to Read/Write. The project's entitlements file already sets this.
+8. Press Run (Command-R).
+
+The team and bundle identifier you pick are saved in `Dedupe.xcodeproj/project.pbxproj`. Commit that change if you want it in the repository.
+
+## Submit to the Mac App Store
+
+1. In [App Store Connect](https://appstoreconnect.apple.com), go to Apps, click **+**, choose New App, pick macOS, and select the bundle identifier you set in Xcode.
+2. In Xcode, set the run destination to **Any Mac**, then choose Product, Archive.
+3. When the Organizer window opens, select the archive, click **Distribute App**, choose **App Store Connect**, and follow the steps to upload.
+4. Back in App Store Connect, fill in the description, keywords, screenshots, support URL and privacy policy URL, then pick the uploaded build and submit it for review.
+
+Things already set up for review:
+
+| Item | Where |
+| --- | --- |
+| App Sandbox with read/write access to user-selected files, plus app-scoped bookmarks | `App/Dedupe.entitlements` |
+| App icon at every macOS size | `App/Resources/Assets.xcassets/AppIcon.appiconset` |
+| Privacy manifest that declares file timestamp and UserDefaults use | `App/Resources/PrivacyInfo.xcprivacy` |
+| Export compliance: `ITSAppUsesNonExemptEncryption` is false, because SHA-256 hashing of local files is exempt | `App/Info.plist` |
+| App category: Utilities | target build settings |
+
+For the App Privacy questions in App Store Connect, answer that the app collects no data. Dedupe makes no network connections.
+
+Increase **Version** and **Build** on the target's General tab before each new upload.
 
 ## Safety rules
 
@@ -32,70 +66,24 @@ Requires macOS 14 Sonoma or later. Runs on Apple silicon and Intel Macs.
 
 Sets are sorted by how much space they waste, largest first.
 
-## Get the app
-
-### Option 1: download from GitHub Actions
-
-Every push builds the app on a macOS runner.
-
-1. Open the repository's **Actions** tab and pick the latest green **Build** run.
-2. Download the **Dedupe-app** artifact at the bottom of the run page.
-3. Unzip it. GitHub wraps the file in a second zip, so you get `Dedupe.zip`; unzip that too to get `Dedupe.app`.
-4. Move `Dedupe.app` to your Applications folder.
-
-The app has an ad-hoc signature but is not notarized by Apple, so macOS blocks the first launch. To allow it:
-
-- On macOS 15 Sequoia and later, open the app once and dismiss the warning. Then go to System Settings, Privacy & Security, scroll down, and click **Open Anyway** next to the Dedupe message.
-- On macOS 14 Sonoma, Control-click the app in Finder, choose **Open**, then click **Open** in the dialog.
-
-You can also clear the quarantine flag in Terminal:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Dedupe.app
-```
-
-### Option 2: build in Xcode
-
-1. Install Xcode 15 or later from the App Store.
-2. Clone this repository.
-3. In Xcode, choose File, Open, and select `Package.swift`. You can also run `open Package.swift` in Terminal.
-4. Select the `DedupeMac` scheme and **My Mac** as the destination, then press Run (Command-R).
-
-### Option 3: build from Terminal
-
-With Xcode or the Xcode command line tools installed:
-
-```bash
-./scripts/build-app.sh
-```
-
-This writes `build/Dedupe.app` and `build/Dedupe.zip`. It builds a universal binary by default. To build only for the current Mac, which is faster:
-
-```bash
-UNIVERSAL=0 ./scripts/build-app.sh
-```
-
-Run the tests with:
-
-```bash
-swift test
-```
-
-## Permissions
-
-macOS asks for permission the first time Dedupe reads Desktop, Documents, Downloads, or an external drive. Click **Allow**.
-
-Some folders stay unreadable without Full Disk Access. After a scan, the results page shows how many items could not be read and has a button that opens the right Settings page. To grant access, go to System Settings, Privacy & Security, Full Disk Access, add Dedupe, and run the scan again.
-
 ## Project layout
 
 | Path | Contents |
 | --- | --- |
-| `Sources/DedupeCore` | Scanner, hashing, file type lists, keep rules, and the safe-trash planner. It has no UI code and is covered by unit tests. |
-| `Sources/DedupeMac` | SwiftUI app: sidebar with folders and file types, the results list, and the Trash flow. |
+| `Dedupe.xcodeproj` | Xcode project for the app. Open this one. |
+| `Sources/DedupeCore` | Scanner, hashing, file type lists, keep rules, and the safe-trash planner. It has no UI code. |
+| `Sources/DedupeMac` | SwiftUI app: sidebar with folders and file types, the results list, the Trash flow, and folder bookmarks. |
+| `App` | Entitlements, Info.plist additions, app icon and privacy manifest. |
 | `Tests/DedupeCoreTests` | XCTest unit tests for `DedupeCore`. |
-| `Resources/Info.plist` | App bundle metadata used by `scripts/build-app.sh`. |
-| `scripts/build-app.sh` | Builds the release binary and wraps it in `Dedupe.app`. |
-| `.github/workflows/build.yml` | CI: runs the tests, builds the app, and uploads the zip. |
+| `Package.swift` | Swift package used to run the unit tests from Terminal. |
+| `.github/workflows/build.yml` | CI: runs the tests and builds the Xcode project without signing. |
+
+The Xcode project compiles `Sources/DedupeCore` and `Sources/DedupeMac` into one app target. Xcode adds any new `.swift` file in those folders to the target, so you do not need to edit the project file when you add code.
+
+Run the unit tests from Terminal with:
+
+```bash
+swift test
+```
 
 To add a predefined file type, add a case to `FileTypeCategory` in `Sources/DedupeCore/FileTypes.swift` and list its extensions. The sidebar lists every case, so no UI change is needed.
